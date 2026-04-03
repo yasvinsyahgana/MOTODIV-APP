@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API E-Commerce</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 0 20px; background: #f4f4f4; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #28a745; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-size: 16px; }
+        button:hover { background: #218838; }
+        pre { background: #2d2d2d; color: #83ff83; padding: 15px; overflow-x: auto; border-radius: 4px; }
+        .response-area { display: none; }
+    </style>
+</head>
+<body>
+
+<h1>Tester API Toko Online</h1>
+
+<div class="card">
+    <h2>1. Login (Dapatkan Session)</h2>
+    <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="email" value="admin@example.com" placeholder="Masukkan email admin">
+    </div>
+    <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" value="123456" placeholder="Masukkan password">
+    </div>
+    <button onclick="handleLogin()">Login</button>
+    <div id="loginResult" class="response-area"><pre></pre></div>
+</div>
+
+<div class="card">
+    <h2>2. Tambah Produk (Upload Gambar)</h2>
+    <form id="productForm">
+        <label>Nama Produk:</label>
+        <input type="text" name="nama" required>
+
+        <label>Kategori:</label>
+        <input type="text" name="kategori" required>
+
+        <label>Deskripsi:</label>
+        <textarea name="deskripsi" rows="3" required></textarea>
+
+        <label>Harga:</label>
+        <input type="number" name="harga" required>
+
+        <label>Stok:</label>
+        <input type="number" name="stok" required>
+
+        <label>Gambar (Bisa pilih > 1):</label>
+        <input type="file" name="gambar" multiple accept="image/*" required>
+
+        <button type="submit">Upload Produk</button>
+    </form>
+    <div id="productResult" class="response-area"><pre></pre></div>
+</div>
+
+<script>
+    const BASE_URL = 'http://localhost:3000'; // Sesuaikan port server Anda
+
+    // Fungsi Helper untuk menampilkan hasil
+    function showResult(elementId, data) {
+        const el = document.getElementById(elementId);
+        el.style.display = 'block';
+        el.querySelector('pre').textContent = JSON.stringify(data, null, 2);
+    }
+
+    // 1. Handle Login
+    async function handleLogin() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const res = await fetch(`${BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+                credentials: 'include' // PENTING: Agar cookie session tersimpan
+            });
+            const data = await res.json();
+            showResult('loginResult', data);
+            if(res.ok) alert("Login Berhasil! Silakan upload produk.");
+        } catch (err) {
+            showResult('loginResult', { error: err.message });
+        }
+    }
+
+    // 2. Handle Upload Produk
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target); // Otomatis bungkus file & text
+
+        try {
+            const res = await fetch(`${BASE_URL}/products`, {
+                method: 'POST',
+                body: formData, // Jangan set Content-Type header manual saat pakai FormData
+                credentials: 'include' // Kirim cookie session login
+            });
+            const data = await res.json();
+            showResult('productResult', data);
+        } catch (err) {
+            showResult('productResult', { error: err.message });
+        }
+    });
+</script>
+</body>
+</html>

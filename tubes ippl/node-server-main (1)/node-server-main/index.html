@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Tester - MotoDiv (With Image Support)</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 10px;
+            background-color: #f0f2f5;
+        }
+        section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-basis: 300px;
+            flex-grow: 1;
+        }
+        h2 {
+            margin-top: 0;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+            color: #333;
+            font-size: 1.2rem;
+        }
+        fieldset {
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        legend {
+            font-weight: bold;
+            color: #007bff;
+            padding: 0 5px;
+        }
+        input, select, button, textarea {
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #0056b3; }
+        button.delete { background-color: #dc3545; }
+        button.delete:hover { background-color: #c82333; }
+        button.update { background-color: #ffc107; color: #212529; }
+        button.update:hover { background-color: #e0a800; }
+
+        /* Indikator Status */
+        .status-box {
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            text-align: center;
+            font-weight: bold;
+        }
+        .connected { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .disconnected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        /* Area Response */
+        #response-output {
+            white-space: pre-wrap;
+            background-color: #282c34;
+            color: #abb2bf;
+            border: 1px solid #444;
+            padding: 15px;
+            border-radius: 6px;
+            min-height: 150px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 13px;
+        }
+        #user-info {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ffeeba;
+            white-space: pre-wrap;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 12px;
+            color: #856404;
+        }
+
+        /* Styling untuk Preview Produk */
+        #product-preview-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .product-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            background: #fff;
+            font-size: 0.8rem;
+        }
+        .product-card img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            border: 1px solid #eee;
+        }
+        .product-card strong { display: block; margin-bottom: 2px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<section>
+    <h2>1. Auth & Info</h2>
+    <div id="connection-status" class="status-box disconnected">Connecting...</div>
+
+    <fieldset>
+        <legend>Register</legend>
+        <input type="email" id="reg-email" placeholder="Email (cth: user@mail.com)">
+        <input type="text" id="reg-nama" placeholder="Nama (cth: User Biasa)">
+        <input type="text" id="reg-hp" placeholder="No HP (cth: 08123)">
+        <input type="password" id="reg-pass" placeholder="Password">
+        <select id="reg-role">
+            <option value="customer">Customer</option>
+            <option value="admin">Admin</option>
+        </select>
+        <button id="btn-register">Register</button>
+    </fieldset>
+
+    <fieldset>
+        <legend>Login</legend>
+        <input type="email" id="login-email" placeholder="Email (user@mail.com)">
+        <input type="password" id="login-pass" placeholder="Password">
+        <button id="btn-login">Login (Set Session)</button>
+    </fieldset>
+
+    <fieldset>
+        <legend>Logout</legend>
+        <button id="btn-logout" class="delete">Logout</button>
+    </fieldset>
+
+    <fieldset>
+        <legend>User Info (Session)</legend>
+        <pre id="user-info">Belum Login</pre>
+    </fieldset>
+</section>
+
+<section>
+    <h2>2. Alur Customer</h2>
+
+    <fieldset>
+        <legend>Products (Publik)</legend>
+        <button id="btn-get-products">Get All Products (Show Images)</button>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
+        <input type="number" id="prod-id" placeholder="ID Produk (cth: 1)">
+        <button id="btn-get-product-by-id">Get Product by ID</button>
+    </fieldset>
+
+    <fieldset>
+        <legend>Cart (Perlu Login)</legend>
+        <input type="number" id="cart-prod-id" placeholder="ID Produk (cth: 1)">
+        <input type="number" id="cart-qty" placeholder="Qty (cth: 2)" value="1">
+        <button id="btn-add-cart">Add to Cart</button>
+        <button id="btn-cart-update" class="update">Update Qty</button>
+        <button id="btn-cart-delete" class="delete">Delete Item</button>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
+        <button id="btn-get-cart">Get Cart</button>
+    </fieldset>
+
+    <fieldset>
+        <legend>Orders (Perlu Login)</legend>
+        <button id="btn-checkout">Create Order (Checkout)</button>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
+        <input type="number" id="order-id" placeholder="ID Pesanan (dari checkout)">
+        <button id="btn-get-order-detail">Get Order Detail</button>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
+        <select id="pay-method">
+            <option value="">-- Pilih Metode --</option>
+            <option value="MOBILE BANKING">MOBILE BANKING</option>
+            <option value="DANA">DANA</option>
+            <option value="QRIS">QRIS</option>
+            <option value="VA">VA</option>
+        </select>
+        <input type="number" id="pay-amount" placeholder="Amount (cth: 50000)">
+        <button id="btn-add-payment">Add Payment</button>
+    </fieldset>
+</section>
+
+<section>
+    <h2>3. Admin & User Actions</h2>
+    <fieldset>
+        <legend>Add Product (Upload File)</legend>
+        <input type="text" id="admin-prod-nama" placeholder="Nama Produk">
+        <input type="text" id="admin-prod-kategori" placeholder="Kategori">
+        <textarea id="admin-prod-desk" placeholder="Deskripsi" rows="2"></textarea>
+        <input type="number" id="admin-prod-harga" placeholder="Harga">
+        <input type="number" id="admin-prod-stok" placeholder="Stok">
+
+        <label style="font-size:0.8rem; font-weight:bold;">Upload Gambar (Max 5):</label>
+        <input type="file" id="admin-prod-file" multiple accept="image/*">
+
+        <button id="btn-admin-add-prod">Add Product</button>
+    </fieldset>
+
+    <fieldset>
+        <legend>Update/Delete Product</legend>
+        <input type="number" id="admin-prod-id" placeholder="ID Produk">
+        <button id="btn-admin-update-prod" class="update">Update Product (Partial)</button>
+        <button id="btn-admin-delete-prod" class="delete">Delete Product</button>
+    </fieldset>
+
+    <fieldset>
+        <legend>User Management</legend>
+        <button id="btn-user-get-all">Get All Users (Admin)</button>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
+        <input type="number" id="user-id" placeholder="User ID">
+        <button id="btn-user-get">Get User by ID</button>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
+        <input type="text" id="user-update-nama" placeholder="Nama Baru">
+        <input type="email" id="user-update-email" placeholder="Email Baru">
+        <button id="btn-user-update" class="update">Update User</button>
+    </fieldset>
+</section>
+
+<section style="flex-grow: 2; flex-basis: 400px;">
+    <h2>Server Response & Preview</h2>
+    <div style="margin-bottom: 5px; font-size: 0.8rem; color: #666;">
+        Target URL: <span id="target-url-display" style="font-weight: bold;">Loading...</span>
+    </div>
+
+    <label>Raw JSON:</label>
+    <pre id="response-output">Menunggu request...</pre>
+
+    <label>Visual Preview (Gambar):</label>
+    <div id="product-preview-area" style="background: #eee; padding: 10px; min-height: 100px; border-radius: 6px;">
+        <em style="color:#666">Preview gambar akan muncul di sini setelah "Get All Products"</em>
+    </div>
+</section>
+
+<script>
+    const baseUrl = 'http://localhost:3000';
+    document.getElementById('target-url-display').textContent = baseUrl;
+    document.getElementById('connection-status').textContent = `Target: ${baseUrl}`;
+    document.getElementById('connection-status').className = "status-box connected";
+
+    const output = document.getElementById('response-output');
+    const userInfoEl = document.getElementById('user-info');
+    const previewArea = document.getElementById('product-preview-area');
+
+    const showResponse = (data) => {
+        output.textContent = JSON.stringify(data, null, 2);
+    };
+
+    const getHeaders = () => {
+        return { 'Content-Type': 'application/json' };
+    };
+
+    // --- CEK LOGIN OTOMATIS ---
+    async function autoCheckLogin() {
+        try {
+            const res = await fetch(`${baseUrl}/auth/check`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                userInfoEl.textContent =
+                    `ID: ${data.user.userId}\n` +
+                    `Email: ${data.user.email}\n` +
+                    `Role: ${data.user.role}`;
+                document.getElementById('connection-status').textContent = "Terhubung & Sudah Login";
+            }
+        } catch (e) {
+            console.log("Belum login atau sesi habis.");
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        autoCheckLogin();
+
+        // --- AUTH ---
+        document.getElementById('btn-register').onclick = async () => {
+            const body = {
+                email: document.getElementById('reg-email').value,
+                nama: document.getElementById('reg-nama').value,
+                no_hp: document.getElementById('reg-hp').value,
+                password: document.getElementById('reg-pass').value,
+                role: document.getElementById('reg-role').value
+            };
+            try {
+                const res = await fetch(`${baseUrl}/auth/register`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    credentials: 'include',
+                    body: JSON.stringify(body)
+                });
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        document.getElementById('btn-login').onclick = async () => {
+            const body = {
+                email: document.getElementById('login-email').value,
+                password: document.getElementById('login-pass').value
+            };
+            try {
+                const res = await fetch(`${baseUrl}/auth/login`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    credentials: 'include',
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (res.ok && data.user) {
+                    userInfoEl.textContent = `ID: ${data.user.userId}\nEmail: ${data.user.email}\nRole: ${data.user.role}`;
+                    showResponse({ message: "Login Berhasil", user: data.user });
+                } else {
+                    showResponse(data);
+                }
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        document.getElementById('btn-logout').onclick = async () => {
+            try {
+                const res = await fetch(`${baseUrl}/auth/logout`, { method: 'POST', headers: getHeaders(), credentials: 'include' });
+                userInfoEl.textContent = "Logout Berhasil";
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        // --- PRODUCTS (GET & DISPLAY IMAGES) ---
+        document.getElementById('btn-get-products').onclick = async () => {
+            previewArea.innerHTML = '<em style="color:#666">Loading...</em>';
+            try {
+                // Pastikan URL benar (tanpa /search jika route default)
+                const res = await fetch(`${baseUrl}/products/search`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                showResponse(data);
+
+                // RENDERING GAMBAR VISUAL
+                previewArea.innerHTML = ''; // Clear old data
+                if (Array.isArray(data)) {
+                    data.forEach(prod => {
+                        const card = document.createElement('div');
+                        card.className = 'product-card';
+
+                        // Handle gambar (Array atau String)
+                        let imgSrc = 'https://via.placeholder.com/150?text=No+Image';
+
+                        // Logika: jika prod.gambar adalah array dan ada isinya
+                        if (Array.isArray(prod.gambar) && prod.gambar.length > 0) {
+                            // Ambil gambar pertama
+                            imgSrc = `${baseUrl}/uploads/${prod.gambar[0]}`;
+                        } else if (typeof prod.gambar === 'string' && prod.gambar) {
+                            // Fallback jika backend kirim string
+                            imgSrc = `${baseUrl}/uploads/${prod.gambar}`;
+                        }
+
+                        card.innerHTML = `
+                            <img src="${imgSrc}" alt="${prod.nama}" onerror="this.src='https://via.placeholder.com/150?text=Error'">
+                            <strong>${prod.nama}</strong>
+                            <div>ID: ${prod.id_produk}</div>
+                            <div>Rp ${prod.harga}</div>
+                            <div style="font-size:10px; color:gray">Stok: ${prod.stok}</div>
+                        `;
+                        previewArea.appendChild(card);
+                    });
+                } else {
+                    previewArea.innerHTML = '<div style="padding:10px">Data produk bukan array atau kosong.</div>';
+                }
+
+            } catch (e) {
+                showResponse({ error: e.message });
+                previewArea.innerHTML = 'Error loading images.';
+            }
+        };
+
+        document.getElementById('btn-get-product-by-id').onclick = async () => {
+            const prodId = document.getElementById('prod-id').value;
+            if (!prodId) return showResponse({ error: "Masukkan ID Produk terlebih dahulu" });
+
+            // Tampilkan loading di area preview
+            previewArea.innerHTML = '<em style="color:#666">Loading single product...</em>';
+
+            try {
+                const res = await fetch(`${baseUrl}/products/search/${prodId}`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                showResponse(data); // Tampilkan JSON mentah di kotak hitam
+
+                // --- LOGIKA RENDER GAMBAR ---
+                previewArea.innerHTML = ''; // Bersihkan area preview
+
+                // Cek jika error dari backend (misal ID tidak ketemu)
+                if (!res.ok || data.message) {
+                    previewArea.innerHTML = `<div style="color:red">${data.message || 'Error'}</div>`;
+                    return;
+                }
+
+                // Buat elemen kartu
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.style.maxWidth = '250px'; // Batasi ukuran agar rapi
+
+                // Logic URL Gambar (Support Array atau String)
+                let imgSrc = 'https://via.placeholder.com/150?text=No+Image';
+
+                // 1. Jika data.gambar adalah Array (hasil dari backend yg sudah diperbaiki)
+                if (Array.isArray(data.gambar) && data.gambar.length > 0) {
+                    imgSrc = `${baseUrl}/uploads/${data.gambar[0]}`;
+                }
+                // 2. Jika data.gambar adalah String (hasil backend lama)
+                else if (typeof data.gambar === 'string' && data.gambar) {
+                    // Cek apakah stringnya format JSON "['img.jpg']" (jaga-jaga)
+                    if (data.gambar.startsWith('[')) {
+                        try {
+                            const parsed = JSON.parse(data.gambar);
+                            if (parsed.length > 0) imgSrc = `${baseUrl}/uploads/${parsed[0]}`;
+                        } catch (e) {
+                            // Gagal parse, anggap string biasa
+                            imgSrc = `${baseUrl}/uploads/${data.gambar}`;
+                        }
+                    } else {
+                        imgSrc = `${baseUrl}/uploads/${data.gambar}`;
+                    }
+                }
+
+                // Isi HTML Kartu
+                card.innerHTML = `
+                    <img src="${imgSrc}" alt="${data.nama}" onerror="this.src='https://via.placeholder.com/150?text=Img+Error'">
+                    <strong>${data.nama}</strong>
+                    <div style="margin:5px 0; font-size:0.85rem;">${data.deskripsi || 'Tidak ada deskripsi'}</div>
+                    <div style="font-weight:bold; color:#28a745;">Rp ${data.harga}</div>
+                    <div style="font-size:10px; color:gray">Stok: ${data.stok} | ID: ${data.id_produk}</div>
+                `;
+
+                previewArea.appendChild(card);
+
+            } catch (e) {
+                showResponse({ error: e.message });
+                previewArea.innerHTML = '<div style="color:red">Gagal memuat visual.</div>';
+            }
+        };
+
+        // --- ADMIN ADD PRODUCT (MULTIPART/FORM-DATA) ---
+        document.getElementById('btn-admin-add-prod').onclick = async () => {
+            // 1. Gunakan FormData untuk menangani File + Text
+            const formData = new FormData();
+
+            // 2. Masukkan Text
+            formData.append('nama', document.getElementById('admin-prod-nama').value);
+            formData.append('kategori', document.getElementById('admin-prod-kategori').value);
+            formData.append('deskripsi', document.getElementById('admin-prod-desk').value);
+            formData.append('harga', document.getElementById('admin-prod-harga').value);
+            formData.append('stok', document.getElementById('admin-prod-stok').value);
+
+            // 3. Masukkan File (Multiple)
+            const fileInput = document.getElementById('admin-prod-file');
+            if(fileInput.files.length > 0) {
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    // Nama field harus 'gambar' sesuai backend: upload.array('gambar')
+                    formData.append('gambar', fileInput.files[i]);
+                }
+            }
+
+            try {
+                const res = await fetch(`${baseUrl}/products`, {
+                    method: 'POST',
+                    // JANGAN set 'Content-Type' header secara manual saat pakai FormData!
+                    // Browser akan otomatis set boundary.
+                    credentials: 'include',
+                    body: formData
+                });
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        // --- FITUR LAIN (CART, ORDER, USER) ---
+        // (Kode sama seperti sebelumnya, disederhanakan untuk hemat baris)
+
+        document.getElementById('btn-add-cart').onclick = async () => {
+            const body = { id_produk: document.getElementById('cart-prod-id').value, qty: document.getElementById('cart-qty').value };
+            const res = await fetch(`${baseUrl}/cart/items`, { method: 'POST', headers: getHeaders(), credentials: 'include', body: JSON.stringify(body) });
+            showResponse(await res.json());
+        };
+        document.getElementById('btn-cart-update').onclick = async () => {
+            const id = document.getElementById('cart-prod-id').value;
+            const res = await fetch(`${baseUrl}/cart/items/${id}`, { method: 'PATCH', headers: getHeaders(), credentials: 'include', body: JSON.stringify({qty: document.getElementById('cart-qty').value}) });
+            showResponse(await res.json());
+        };
+        document.getElementById('btn-cart-delete').onclick = async () => {
+            const id = document.getElementById('cart-prod-id').value;
+            const res = await fetch(`${baseUrl}/cart/items/${id}`, { method: 'DELETE', credentials: 'include' });
+            showResponse(await res.json());
+        };
+        document.getElementById('btn-get-cart').onclick = async () => {
+            const res = await fetch(`${baseUrl}/cart`, { method: 'GET', credentials: 'include' });
+            showResponse(await res.json());
+        };
+        document.getElementById('btn-checkout').onclick = async () => {
+            const res = await fetch(`${baseUrl}/orders`, { method: 'POST', headers: getHeaders(), credentials: 'include' });
+            const data = await res.json();
+            if(data.id_pesanan) document.getElementById('order-id').value = data.id_pesanan;
+            showResponse(data);
+        };
+        document.getElementById('btn-get-order-detail').onclick = async () => {
+            const id = document.getElementById('order-id').value;
+            const res = await fetch(`${baseUrl}/orders/get/${id}`, { method: 'GET', credentials: 'include' });
+            showResponse(await res.json());
+        };
+        document.getElementById('btn-add-payment').onclick = async () => {
+            const id = document.getElementById('order-id').value;
+            const body = { method: document.getElementById('pay-method').value, amount: document.getElementById('pay-amount').value };
+            const res = await fetch(`${baseUrl}/orders/${id}/payments`, { method: 'POST', headers: getHeaders(), credentials: 'include', body: JSON.stringify(body) });
+            showResponse(await res.json());
+        };
+
+        // Admin Update/Delete & User Mgmt (Sama seperti sebelumnya)
+        document.getElementById('btn-admin-delete-prod').onclick = async () => {
+            const id = document.getElementById('admin-prod-id').value;
+            const res = await fetch(`${baseUrl}/products/${id}`, { method: 'DELETE', credentials: 'include' });
+            showResponse(await res.json());
+        };
+        document.getElementById('btn-user-get-all').onclick = async () => {
+            const res = await fetch(`${baseUrl}/users`, { method: 'GET', credentials: 'include' });
+            showResponse(await res.json());
+        };
+    });
+</script>
+</body>
+</html>
